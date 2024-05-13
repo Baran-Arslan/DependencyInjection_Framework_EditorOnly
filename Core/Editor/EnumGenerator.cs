@@ -1,32 +1,24 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Sirenix.Utilities.Editor;
 using UnityEditor;
 using UnityEngine;
 
 namespace iCare.Core.Editor {
-    public static class EnumGenerator {
-        public static IReadOnlyList<T> GenerateAll<T>(string enumCreatePath, string targetEnumName) where T : Object {
-            var guids = AssetDatabase.FindAssets("t:" + typeof(T).Name);
-            var enumsToBeAdded = new string[guids.Length];
-            var assets = new T[guids.Length];
-
-            for (var i = 0; i < guids.Length; i++) {
-                var path = AssetDatabase.GUIDToAssetPath(guids[i]);
-                var asset = AssetDatabase.LoadAssetAtPath<T>(path);
-                assets[i] = asset;
-                enumsToBeAdded[i] = asset.name;
-            }
-
+    internal static class EnumGenerator {
+        internal static IReadOnlyList<T> GenerateAll<T>(string enumCreatePath, string targetEnumName) where T : Object {
+            var allAssets = AssetUtilities.GetAllAssetsOfType<T>().ToArray();
+            var enumsToBeAdded = allAssets.Select(asset => asset.name).ToList();
             Generate(enumCreatePath, targetEnumName, enumsToBeAdded);
-            return assets;
+            return allAssets;
         }
 
         static void Generate(string enumCreatePath, string targetEnumName, IReadOnlyList<string> enumsToBeAdded) {
             var filePathAndName = GetPath(enumCreatePath, targetEnumName);
             var oldEnums = GetCurrentEnums(filePathAndName);
 
-            var highestValue = 0;
+            var highestValue = 1;
             if (oldEnums != null && oldEnums.Any())
                 highestValue = oldEnums.Values.Max() + 1;
 
@@ -40,7 +32,7 @@ namespace iCare.Core.Editor {
             using var streamWriter = new StreamWriter(filePathAndName);
             streamWriter.WriteLine("public enum " + targetEnumName);
             streamWriter.WriteLine("{");
-            streamWriter.WriteLine("    Empty = -1,");
+            streamWriter.WriteLine("    Empty = 0,");
 
             for (var index = 0; index < enumsToBeAdded.Count; index++) {
                 var enumString = enumsToBeAdded[index];
